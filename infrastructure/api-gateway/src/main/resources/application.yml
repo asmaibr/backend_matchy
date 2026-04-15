@@ -1,0 +1,73 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: api-gateway
+  
+  cloud:
+    gateway:
+      # Enable discovery locator
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      
+      # Global CORS configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+# Application Info
+info:
+  app:
+    name: Matchy API Gateway
+    description: API Gateway for routing requests to microservices
+    version: 1.0.0
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.matchy.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

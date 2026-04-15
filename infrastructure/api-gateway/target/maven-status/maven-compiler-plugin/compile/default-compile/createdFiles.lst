@@ -1,0 +1,4 @@
+com\matchy\gateway\config\GatewayConfig.class
+com\matchy\gateway\config\CorsConfig.class
+com\matchy\gateway\filter\LoggingFilter.class
+com\matchy\gateway\ApiGatewayApplication.class
