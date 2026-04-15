@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: content-route
+          uri: lb://CONTENT-SERVICE
+          predicates:
+            - Path=/api/Content/**
+
+        - id: assessment-route
+          uri: lb://CONTENT-SERVICE
+          predicates:
+            - Path=/api/Assessment/**
+
+        - id: user-route
+          uri: lb://CONTENT-SERVICE
+          predicates:
+            - Path=/api/User/**
+
+        - id: certification-route
+          uri: lb://CONTENT-SERVICE
+          predicates:
+            - Path=/api/Certification/**
+
+        - id: auth-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/auth/**
+
+        - id: users-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
+
+        - id: wallet-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/wallet/**
+
+        - id: badges-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/badges/**,/api/gamification/**
+
+        - id: projects-route
+          uri: lb://PROFILE_PROJECT_SERVICE
+          predicates:
+            - Path=/api/projects/**,/api/proposals/**,/api/categories/**
+
+        - id: matching-ai-route
+          uri: lb://PROFILE_PROJECT_SERVICE
+          predicates:
+            - Path=/api/matching/**,/api/predictions/**,/api/ai/**,/api/chat/**
+
+        - id: notifications-route
+          uri: lb://PROFILE_PROJECT_SERVICE
+          predicates:
+            - Path=/api/notifications/**
+
+        - id: freelancer-stats-route
+          uri: lb://PROFILE_PROJECT_SERVICE
+          predicates:
+            - Path=/api/freelancers/**,/api/availability/**,/api/market/**,/api/profiles/**,/api/stats/**
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
