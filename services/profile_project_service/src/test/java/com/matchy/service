@@ -1,0 +1,231 @@
+package com.matchy.service;
+
+import com.matchy.entity.PasswordResetToken;
+import com.matchy.entity.User;
+import com.matchy.entity.Wallet;
+import com.matchy.repository.PasswordResetTokenRepository;
+import com.matchy.repository.UserRepository;
+import com.matchy.repository.WalletRepository;
+import com.matchy.security.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+    @Mock private UserRepository userRepository;
+    @Mock private BCryptPasswordEncoder passwordEncoder;
+    @Mock private JwtUtil jwtUtil;
+    @Mock private EmailService emailService;
+    @Mock private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock private WalletRepository walletRepository;
+
+    @InjectMocks private UserService userService;
+
+    private User user;
+
+    @BeforeEach
+    void setUp() {
+        user = new User();
+        user.setId(1L);
+        user.setFirstName("Test");
+        user.setLastName("User");
+        user.setEmail("test@test.com");
+        user.setPassword("hashedPassword");
+        user.setRole(User.Role.CLIENT);
+        user.setStatus(User.UserStatus.ACTIVE);
+    }
+
+    // ── getAllUsers ──────────────────────────────────────────────
+    @Test
+    void getAllUsers_shouldReturnList() {
+        when(userRepository.findAll()).thenReturn(List.of(user));
+        List<User> result = userService.getAllUsers();
+        assertEquals(1, result.size());
+        verify(userRepository).findAll();
+    }
+
+    // ── getUserById ──────────────────────────────────────────────
+    @Test
+    void getUserById_shouldReturnUser_whenExists() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        Optional<User> result = userService.getUserById(1L);
+        assertTrue(result.isPresent());
+        assertEquals("test@test.com", result.get().getEmail());
+    }
+
+    @Test
+    void getUserById_shouldReturnEmpty_whenNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        Optional<User> result = userService.getUserById(99L);
+        assertFalse(result.isPresent());
+    }
+
+    // ── createUser ───────────────────────────────────────────────
+    @Test
+    void createUser_shouldSaveUser_andCreateWallet() {
+        when(userRepository.existsByEmail(user.getEmail())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashedPassword");
+        when(userRepository.save(any())).thenReturn(user);
+
+        User result = userService.createUser(user);
+
+        assertNotNull(result);
+        verify(userRepository).save(any(User.class));
+        verify(walletRepository).save(any(Wallet.class));
+    }
+
+    @Test
+    void createUser_shouldThrow_whenEmailAlreadyExists() {
+        when(userRepository.existsByEmail(user.getEmail())).thenReturn(true);
+        RuntimeException ex = assertThrows(RuntimeException.class,
+            () -> userService.createUser(user));
+        assertEquals("Email already exists", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_shouldSendWelcomeEmail_forFreelancer() {
+        user.setRole(User.Role.FREELANCER);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenReturn(user);
+
+        userService.createUser(user);
+
+        verify(emailService).sendWelcomeFreelancer(user.getEmail(), user.getFirstName());
+    }
+
+    @Test
+    void createUser_shouldSendWelcomeEmail_forClient() {
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenReturn(user);
+
+        userService.createUser(user);
+
+        verify(emailService).sendWelcomeClient(user.getEmail(), user.getFirstName());
+    }
+
+    // ── updateUser ───────────────────────────────────────────────
+    @Test
+    void updateUser_shouldUpdateFields() {
+        User details = new User();
+        details.setFirstName("Updated");
+        details.setLastName("Name");
+        details.setBio("New bio");
+        details.setSkills("Java");
+        details.setLocation("Tunis");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+
+        User result = userService.updateUser(1L, details);
+
+        assertEquals("Updated", result.getFirstName());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUser_shouldThrow_whenUserNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> userService.updateUser(99L, user));
+    }
+
+    // ── deleteUser ───────────────────────────────────────────────
+    @Test
+    void deleteUser_shouldCallRepository() {
+        userService.deleteUser(1L);
+        verify(userRepository).deleteById(1L);
+    }
+
+    // ── updateStatus ─────────────────────────────────────────────
+    @Test
+    void updateStatus_shouldChangeStatus() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+
+        User result = userService.updateStatus(1L, "INACTIVE");
+
+        assertEquals(User.UserStatus.INACTIVE, result.getStatus());
+    }
+
+    @Test
+    void updateStatus_shouldThrow_whenUserNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> userService.updateStatus(99L, "ACTIVE"));
+    }
+
+    // ── login ────────────────────────────────────────────────────
+    @Test
+    void login_shouldReturnTokenAndUser_whenCredentialsValid() {
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Test1234", "hashedPassword")).thenReturn(true);
+        when(jwtUtil.generateToken(any(), any(), any(), any(), any())).thenReturn("jwt-token");
+
+        Map<String, Object> result = userService.login("test@test.com", "Test1234");
+
+        assertEquals("jwt-token", result.get("token"));
+        assertNotNull(result.get("user"));
+    }
+
+    @Test
+    void login_shouldThrow_whenEmailNotFound() {
+        when(userRepository.findByEmail("wrong@test.com")).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class,
+            () -> userService.login("wrong@test.com", "Test1234"));
+    }
+
+    @Test
+    void login_shouldThrow_whenPasswordWrong() {
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrongpass", "hashedPassword")).thenReturn(false);
+        assertThrows(RuntimeException.class,
+            () -> userService.login("test@test.com", "wrongpass"));
+    }
+
+    // ── resetPassword ────────────────────────────────────────────
+    @Test
+    void resetPassword_shouldReturnFalse_whenTokenNotFound() {
+        when(passwordResetTokenRepository.findByToken("invalid")).thenReturn(Optional.empty());
+        assertFalse(userService.resetPassword("invalid", "newpass"));
+    }
+
+    @Test
+    void resetPassword_shouldReturnFalse_whenTokenExpired() {
+        PasswordResetToken expiredToken = mock(PasswordResetToken.class);
+        when(expiredToken.isExpired()).thenReturn(true);
+        when(passwordResetTokenRepository.findByToken("expired")).thenReturn(Optional.of(expiredToken));
+        assertFalse(userService.resetPassword("expired", "newpass"));
+    }
+
+    @Test
+    void resetPassword_shouldUpdatePassword_whenTokenValid() {
+        PasswordResetToken validToken = mock(PasswordResetToken.class);
+        when(validToken.isExpired()).thenReturn(false);
+        when(validToken.getEmail()).thenReturn("test@test.com");
+        when(passwordResetTokenRepository.findByToken("valid-token")).thenReturn(Optional.of(validToken));
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("newpass")).thenReturn("hashedNewPass");
+        when(userRepository.save(any())).thenReturn(user);
+
+        boolean result = userService.resetPassword("valid-token", "newpass");
+
+        assertTrue(result);
+        verify(userRepository).save(user);
+        verify(passwordResetTokenRepository).delete(validToken);
+    }
+}
