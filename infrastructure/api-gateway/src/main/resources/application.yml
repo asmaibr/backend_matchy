@@ -9,15 +9,32 @@ spring:
     max-in-memory-size: 10MB
   cloud:
     gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      # Enable discovery locator
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
+      # Route configuration
       routes:
-        - id: backend-service
+        - id: event-service
+          uri: lb://matchy-backend
+          predicates:
+            - Path=/api/evenements/**, /api/registrations/**
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**, /api/users/**, /api/wallet/**, /api/badges/**
+        - id: profile-project-service
+          uri: lb://profile_project_service
+          predicates:
+            - Path=/api/projects/**, /api/categories/**, /api/proposals/**, /api/notifications/**, /api/ai/**, /api/matching/**, /api/predictions/**, /api/market/**, /api/freelancers/**, /api/availability/**
+        - id: milestone-service
           uri: lb://backend-service
           predicates:
-            - Path=/api/**
+            - Path=/api/milestones/**, /api/applications/**, /api/payments/**, /api/search/**, /api/freelancer-profiles/**, /api/companies/**
+      # Global CORS configuration
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -28,11 +45,12 @@ spring:
               - POST
               - PUT
               - DELETE
-              - OPTIONS
               - PATCH
             allowedHeaders: "*"
             allowCredentials: true
+            maxAge: 3600
 
+# Eureka Client Configuration
 eureka:
   client:
     service-url:
@@ -40,4 +58,37 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
   instance:
+    hostname: localhost
     prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+# Application Info
+info:
+  app:
+    name: Matchy API Gateway
+    description: API Gateway for routing requests to microservices
+    version: 1.0.0
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.matchy.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

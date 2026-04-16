@@ -1,0 +1,25 @@
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.settings/
+.classpath
+.project
+
+# Logs
+*.log
+logs/
+
+# Secrets
+.env
+secret.properties
+
+# OS
+.DS_Store
+Thumbs.db
