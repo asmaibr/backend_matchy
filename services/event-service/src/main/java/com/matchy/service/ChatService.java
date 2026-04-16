@@ -35,6 +35,11 @@ public class ChatService {
 
     public String chatWithHistory(List<ChatMessageDTO> history) {
         try {
+            // Check if API key is not configured
+            if (groqApiKey == null || groqApiKey.isEmpty() || groqApiKey.contains("placeholder")) {
+                return "Chat service is not configured. Please set the GROQ_API_KEY environment variable to enable AI features.";
+            }
+            
             // Check for null or empty history
             if (history == null) {
                 return "The conversation history is missing. Please try again.";

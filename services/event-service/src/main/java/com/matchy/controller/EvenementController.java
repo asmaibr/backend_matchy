@@ -20,10 +20,10 @@ import java.util.List;
 public class EvenementController {
 
     private final EvenementService evenementService;
-    private final ChatService chatService;
+    private ChatService chatService;
 
     @Autowired
-    public EvenementController(EvenementService evenementService, ChatService chatService) {
+    public EvenementController(EvenementService evenementService, @Autowired(required = false) ChatService chatService) {
         this.evenementService = evenementService;
         this.chatService = chatService;
     }
