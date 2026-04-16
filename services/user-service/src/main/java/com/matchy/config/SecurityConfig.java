@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/stats/dashboard").hasAuthority("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasAuthority("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()

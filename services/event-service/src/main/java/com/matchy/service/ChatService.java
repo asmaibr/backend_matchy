@@ -23,7 +23,7 @@ public class ChatService {
     private final EvenementRepository evenementRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${groq.api.key}")
+    @Value("${groq.api.key:}")
     private String groqApiKey;
 
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
