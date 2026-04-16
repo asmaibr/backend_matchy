@@ -56,6 +56,10 @@ class ApplicationRepository {
     const { milestone_id, project_id, freelancer_id, freelancer_name, freelancer_email,
             cv_url, motivation_letter, years_of_experience, proposed_budget } = applicationData;
     
+    console.log('📝 ApplicationRepository.create() called');
+    console.log('📝 ApplicationData:', applicationData);
+    console.log('📝 freelancer_id:', freelancer_id, 'Type:', typeof freelancer_id);
+    
     const [result] = await pool.query(
       `INSERT INTO applications (milestone_id, project_id, freelancer_id, freelancer_name, 
        freelancer_email, cv_url, motivation_letter, years_of_experience, proposed_budget, status)
@@ -64,6 +68,7 @@ class ApplicationRepository {
        cv_url, motivation_letter, years_of_experience, proposed_budget]
     );
     
+    console.log('✅ Application inserted with ID:', result.insertId);
     return result.insertId;
   }
 

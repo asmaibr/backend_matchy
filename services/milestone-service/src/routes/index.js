@@ -2,6 +2,8 @@ import express from 'express';
 import projectRoutes from './project.routes.js';
 import milestoneRoutes from './milestone.routes.js';
 import applicationRoutes from './application.routes.js';
+import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
 import milestoneController from '../controllers/milestone.controller.js';
 import applicationController from '../controllers/application.controller.js';
 import notificationController from '../controllers/notification.controller.js';
@@ -17,6 +19,8 @@ const router = express.Router();
 // MAIN ROUTES
 // ============================================
 
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
 router.use('/projects', projectRoutes);
 router.use('/milestones', milestoneRoutes);
 router.use('/applications', applicationRoutes);
@@ -41,6 +45,7 @@ router.get('/freelancers/:freelancerId/applications', applicationController.getA
 router.get('/freelancers/:freelancerId/submissions', workspaceController.getSubmissionsByFreelancer.bind(workspaceController));
 
 // Notification routes
+router.get('/notifications', notificationController.getAllNotifications.bind(notificationController));
 router.get('/notifications/:userType/:userId', notificationController.getNotifications.bind(notificationController));
 router.get('/notifications/:userType/:userId/unread-count', notificationController.getUnreadCount.bind(notificationController));
 router.put('/notifications/:id/read', notificationController.markAsRead.bind(notificationController));

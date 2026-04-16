@@ -16,6 +16,13 @@ class NotificationService {
     return await notificationRepository.findByUser(userId, userType);
   }
 
+  async getAllNotifications() {
+    console.log('📢 NotificationService.getAllNotifications() called');
+    const notifications = await notificationRepository.findAll();
+    console.log('📢 Found', notifications.length, 'total notifications');
+    return notifications;
+  }
+
   async getUnreadCount(userId, userType) {
     const count = await notificationRepository.getUnreadCount(userId, userType);
     return { count };

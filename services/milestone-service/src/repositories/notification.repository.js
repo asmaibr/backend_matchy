@@ -1,6 +1,16 @@
 import pool from '../config/database.js';
 
 class NotificationRepository {
+  async findAll(limit = 500) {
+    const [notifications] = await pool.query(
+      `SELECT * FROM notifications 
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [limit]
+    );
+    return notifications;
+  }
+
   async create(notificationData) {
     const { user_id, user_type, type, title, message, link, application_id } = notificationData;
     

@@ -3,16 +3,25 @@ import cors from 'cors';
 import mysql from 'mysql2/promise';
 import { sendPaymentApprovalEmail, sendPaymentRejectedEmail } from './email.service.js';
 import eurekaClient from './eureka-client.js';
+import routes from './src/routes/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 9090;
 
-// CORS is handled by API Gateway, so we don't need it here
-// app.use(cors({ origin: true }));
+// Enable CORS for frontend
+app.use(cors({ 
+  origin: ['http://localhost:4200', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Increase body size limit for file uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Use API routes from src/routes
+app.use('/api', routes);
 
 // MySQL Connection Pool
 const pool = mysql.createPool({
@@ -36,6 +45,130 @@ pool.getConnection()
     console.log('⚠️  Please make sure MySQL is running and database "matchy_db" exists');
     console.log('   Run: mysql -u root -p < database/matchy_schema.sql');
   });
+
+// ============================================
+// AUTHENTICATION API
+// ============================================
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, role, location, skills, bio } = req.body;
+    
+    // Check if user already exists
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    // Insert new user (password should be hashed in production)
+    const [result] = await pool.query(
+      `INSERT INTO users (first_name, last_name, email, password, role, location, skills, bio, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NOW())`,
+      [firstName, lastName, email, password, role || 'FREELANCER', location || '', skills || '', bio || '']
+    );
+
+    // Generate a simple token (in production, use JWT)
+    const token = Buffer.from(`${result.insertId}:${email}:${Date.now()}`).toString('base64');
+    
+    // Get the created user
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+    const user = users[0];
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        location: user.location,
+        skills: user.skills,
+        bio: user.bio
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Login user
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Find user by email
+    const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    
+    if (users.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const user = users[0];
+    
+    // Check password (in production, use bcrypt.compare)
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Generate a simple token (in production, use JWT)
+    const token = Buffer.from(`${user.id}:${email}:${Date.now()}`).toString('base64');
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        location: user.location,
+        skills: user.skills,
+        bio: user.bio
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Forgot password
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Check if user exists
+    const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // In production, send email with reset token
+    // For now, just return success
+    res.json({ message: 'Password reset email sent' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Reset password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    // In production, verify token and update password
+    // For now, just return success
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
 
 // ============================================
 // PROJECTS API

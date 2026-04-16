@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import eurekaClient from './eureka-client.js';
 import apiRoutes from './src/routes/index.js';
 
@@ -9,8 +10,11 @@ const PORT = process.env.PORT || 9090;
 // MIDDLEWARE
 // ============================================
 
-// CORS is handled by API Gateway
-// app.use(cors({ origin: true }));
+// Enable CORS for frontend (since we're bypassing gateway temporarily)
+app.use(cors({ 
+  origin: 'http://localhost:4200',
+  credentials: true 
+}));
 
 // Increase body size limit for file uploads (10MB)
 app.use(express.json({ limit: '10mb' }));

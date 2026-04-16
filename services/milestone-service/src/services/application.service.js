@@ -18,20 +18,26 @@ class ApplicationService {
   }
 
   async submitApplication(applicationData) {
+    console.log('🔍 Backend received application data:', applicationData);
+    console.log('🔍 freelancer_id from request:', applicationData.freelancer_id);
     const applicationId = await applicationRepository.create(applicationData);
+    console.log('✅ Application created with ID:', applicationId, 'for freelancer:', applicationData.freelancer_id);
     
     // Get milestone and project info for notification
     const milestone = await milestoneRepository.findById(applicationData.milestone_id);
     const project = await projectRepository.findById(applicationData.project_id);
     
     if (milestone && project) {
-      // Create notification for company (assuming company user_id = 1 for now)
+      // Create notification for the project owner (company/client)
+      // Get the user_id from the project's created_by field or company_id
+      const companyUserId = project.created_by || project.user_id || 1;
+      
       await notificationService.createNotification({
-        user_id: 1,
+        user_id: companyUserId,
         user_type: 'company',
         type: 'application_received',
         title: 'New Application Received',
-        message: `${applicationData.freelancer_name} applied to "${milestone.title}"`,
+        message: `${applicationData.freelancer_name} applied to "${milestone.title}" in project "${project.project_title}"`,
         link: `/backoffice/company-projects/${applicationData.project_id}/review`,
         application_id: applicationId
       });

@@ -1,6 +1,17 @@
 import notificationService from '../services/notification.service.js';
 
 class NotificationController {
+  async getAllNotifications(req, res) {
+    try {
+      console.log('📢 NotificationController.getAllNotifications() called');
+      const notifications = await notificationService.getAllNotifications();
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching all notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch all notifications' });
+    }
+  }
+
   async getNotifications(req, res) {
     try {
       const { userType, userId } = req.params;
